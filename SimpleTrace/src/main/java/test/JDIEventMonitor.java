@@ -46,7 +46,9 @@ public class JDIEventMonitor extends Thread
 {
   // exclude events generated for these classes
   private final String[] excludes = { "java.*", "javax.*", "sun.*", "com.sun.*"};
-
+  // com.example.demo
+  private final String filter = "com.example.demo.*";
+  
   private final VirtualMachine vm;   // the JVM
   private boolean connected = true;  // connected to VM?
   private boolean vmDied;            // has VM death occurred?
@@ -72,26 +74,34 @@ public class JDIEventMonitor extends Thread
     EventRequestManager mgr = vm.eventRequestManager();
 
     MethodEntryRequest menr = mgr.createMethodEntryRequest(); // report method entries
-    for (int i = 0; i < excludes.length; ++i)
-      menr.addClassExclusionFilter(excludes[i]);
+    for (int i = 0; i < excludes.length; ++i) {
+      // menr.addClassExclusionFilter(excludes[i]);
+      menr.addClassFilter(filter);
+    }
     menr.setSuspendPolicy(EventRequest.SUSPEND_EVENT_THREAD);
     menr.enable();
 	
     MethodExitRequest mexr = mgr.createMethodExitRequest();   // report method exits
-    for (int i = 0; i < excludes.length; ++i)
-      mexr.addClassExclusionFilter(excludes[i]);
+    for (int i = 0; i < excludes.length; ++i) {
+      // mexr.addClassExclusionFilter(excludes[i]);
+      mexr.addClassFilter(filter);
+    }
     mexr.setSuspendPolicy(EventRequest.SUSPEND_EVENT_THREAD);
     mexr.enable();
 
     ClassPrepareRequest cpr = mgr.createClassPrepareRequest(); // report class loads
-    for (int i = 0; i < excludes.length; ++i)
-      cpr.addClassExclusionFilter(excludes[i]);
+    for (int i = 0; i < excludes.length; ++i) {
+      // cpr.addClassExclusionFilter(excludes[i]);
+      cpr.addClassFilter(filter);
+    }
     // cpr.setSuspendPolicy(EventRequest.SUSPEND_ALL);
     cpr.enable();
 
     ClassUnloadRequest cur = mgr.createClassUnloadRequest();  // report class unloads
-    for (int i = 0; i < excludes.length; ++i)
-      cur.addClassExclusionFilter(excludes[i]);
+    for (int i = 0; i < excludes.length; ++i) {
+      // cur.addClassExclusionFilter(excludes[i]);
+      cur.addClassFilter(filter);
+    }
     // cur.setSuspendPolicy(EventRequest.SUSPEND_ALL);
     cur.enable();
 
@@ -124,47 +134,54 @@ public class JDIEventMonitor extends Thread
     }
   }  // end of run()
 
-
-
-  private void handleEvent(Event event)
+  @SuppressWarnings("restriction")
+private void handleEvent(Event event) {
   // process a JDI event
-  {
+	  boolean enable = false;
+	
     // method events
-    if (event instanceof MethodEntryEvent)
+    if (event instanceof MethodEntryEvent) {
       methodEntryEvent((MethodEntryEvent) event);
-    else if (event instanceof MethodExitEvent)
-      methodExitEvent((MethodExitEvent) event);
-
+    }
+    else if (event instanceof MethodExitEvent) {
+    	methodExitEvent((MethodExitEvent) event);
+    }
     // class events
-    else if (event instanceof ClassPrepareEvent)
-      classPrepareEvent((ClassPrepareEvent) event);
-    else if (event instanceof ClassUnloadEvent)
-      classUnloadEvent((ClassUnloadEvent) event);
-
+    else if (event instanceof ClassPrepareEvent) {
+    	classPrepareEvent((ClassPrepareEvent) event);
+    }
+    else if (event instanceof ClassUnloadEvent) {
+    	classUnloadEvent((ClassUnloadEvent) event);
+    }
     // thread events
-    else if (event instanceof ThreadStartEvent)
-      threadStartEvent((ThreadStartEvent) event);
-    else if (event instanceof ThreadDeathEvent)
-      threadDeathEvent((ThreadDeathEvent) event);
-
+    else if (event instanceof ThreadStartEvent) {
+    	threadStartEvent((ThreadStartEvent) event);
+    }
+    else if (event instanceof ThreadDeathEvent) {
+    	threadDeathEvent((ThreadDeathEvent) event);
+    }
     // step event -- a line of code is about to be executed
-    else if (event instanceof StepEvent)
+    else if (event instanceof StepEvent) {
       stepEvent((StepEvent) event);
-
+    }
     // modified field event  -- a field is about to be changed
-    else if (event instanceof ModificationWatchpointEvent)
+    else if (event instanceof ModificationWatchpointEvent) {
       fieldWatchEvent((ModificationWatchpointEvent) event);
-
+    }
     // VM events
-    else if (event instanceof VMStartEvent)
-      vmStartEvent((VMStartEvent) event);
-    else if (event instanceof VMDeathEvent)
-      vmDeathEvent((VMDeathEvent) event);
-    else if (event instanceof VMDisconnectEvent)
-      vmDisconnectEvent((VMDisconnectEvent) event);
+    else if (event instanceof VMStartEvent) {
+    	if (enable) vmStartEvent((VMStartEvent) event);
+    }
+    else if (event instanceof VMDeathEvent) {
+    	if (enable) vmDeathEvent((VMDeathEvent) event);
+    }
+    else if (event instanceof VMDisconnectEvent) {
+    	if (enable) vmDisconnectEvent((VMDisconnectEvent) event);
 
-    else
+    }
+    else {
       throw new Error("Unexpected event type");
+    }
   }  // end of handleEvent()
 
 
@@ -360,16 +377,17 @@ public class JDIEventMonitor extends Thread
      If this is the first line in a method then also print 
      the local variables and the object's fields.
   */
-  { Location loc = event.location();
-
+  { 
+  	String out = "stepEvent ";
     try {   // print the line
+    	Location loc = event.location();
       String fnm = loc.sourceName();  // get filename of code
-      System.out.println(fnm + ": " + showCode.show(fnm, loc.lineNumber()) );
+      out = out + fnm + ": " + showCode.show(fnm, loc.lineNumber());
     }
     catch (AbsentInformationException e) {}
-
-    if (loc.codeIndex() == 0)   // at the start of a method
-      printInitialState( event.thread() );
+    // if (loc.codeIndex() == 0) printInitialState( event.thread() );  // at the start of a method
+	System.out.println(out);
+      
   }  // end of stepEvent()
 
 

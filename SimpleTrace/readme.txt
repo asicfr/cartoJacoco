@@ -1,4 +1,15 @@
 
+
+
+Démarrez la machine virtuelle Java avec les options suivantes :
+java -agentlib:jdwp=transport=dt_shmem,server=y,address=<port> <classe>
+La machine virtuelle démarre mais interrompt l'exécution avant de démarrer l'application Java.
+Raccordez le débogueur à la JVM distante :
+jdb -connect com.sun.jdi.SocketAttach:hostname=<host>,port=<port>
+
+https://docs.oracle.com/javase/7/docs/technotes/guides/jpda/conninv.html
+
+
 Pour que ca fonctionne : 
 - il faut ajouter tools.jar dans le classpath du projet (proprietes du projet > java build path > librairies > selectionner jdk > ajouter external > dans le jdl trouver tools.jar)
 - il faut le projet JavaAgentCartoTest à coté, il a été ajouté dans les entries du classpath pour lancer SimpleTrace (voir SimpleTrace.launch)
